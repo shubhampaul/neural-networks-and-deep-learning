@@ -12,6 +12,7 @@ and omits many desirable features.
 #### Libraries
 # Standard library
 import random
+import sys
 
 # Third-party libraries
 import numpy as np
@@ -74,10 +75,10 @@ class Network(object):
         nabla_b = [np.zeros(b.shape) for b in self.biases]
         nabla_w = [np.zeros(w.shape) for w in self.weights]
         for x, y in mini_batch:
-            delta_nabla_b, delta_nabla_w = self.backprop(x, y)
-            nabla_b = [nb+dnb for nb, dnb in zip(nabla_b, delta_nabla_b)]
+            delta_nabla_b, delta_nabla_w = self.backprop(x, y)                            
+            nabla_b = [nb+dnb for nb, dnb in zip(nabla_b, delta_nabla_b)]  #Averaging 1: Add gradients for all i/p (x) of minibatch
             nabla_w = [nw+dnw for nw, dnw in zip(nabla_w, delta_nabla_w)]
-        self.weights = [w-(eta/len(mini_batch))*nw
+        self.weights = [w-(eta/len(mini_batch))*nw                #Averaging 2 and Updating: Divide the sum with minibatch len and update 
                         for w, nw in zip(self.weights, nabla_w)]
         self.biases = [b-(eta/len(mini_batch))*nb
                        for b, nb in zip(self.biases, nabla_b)]
