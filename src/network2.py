@@ -287,6 +287,7 @@ class Network(object):
             np.linalg.norm(w)**2 for w in self.weights)
         return cost
 
+### Saving a Network
     def save(self, filename):
         """Save the neural network to the file ``filename``."""
         data = {"sizes": self.sizes,
