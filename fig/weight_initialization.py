@@ -86,4 +86,4 @@ def make_plot(filename):
     plt.show()
 
 if __name__ == "__main__":
-    main()
+    main('weight_initialization_30.json', 30, 0.1)
