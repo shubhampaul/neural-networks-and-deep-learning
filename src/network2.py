@@ -16,7 +16,7 @@ features.
 import json
 import random
 import sys
-
+import matplotlib.pyplot as plt
 # Third-party libraries
 import numpy as np
 
@@ -99,6 +99,8 @@ class Network(object):
         self.biases = [np.random.randn(y, 1) for y in self.sizes[1:]]
         self.weights = [np.random.randn(y, x)/np.sqrt(x)
                         for x, y in zip(self.sizes[:-1], self.sizes[1:])]
+        self.rmsprop = [np.zeros(numm.shape) for numm in self.weights]
+        self.velocity = [np.zeros(numm.shape) for numm in self.weights]
 
     def large_weight_initializer(self):
         """Initialize the weights using a Gaussian distribution with mean 0
@@ -156,6 +158,8 @@ class Network(object):
         n = len(training_data)
         evaluation_cost, evaluation_accuracy = [], []
         training_cost, training_accuracy = [], []
+        plt.ion()
+        plot_points=np.array([np.zeros([2,2]), np.zeros([2,2]), np.zeros([2,2]), np.zeros([2,2])])
         for j in range(epochs):
             random.shuffle(training_data)
             mini_batches = [
@@ -164,7 +168,7 @@ class Network(object):
             for mini_batch in mini_batches:
                 self.update_mini_batch(
                     mini_batch, eta, lmbda, len(training_data))
-            print ("Epoch %s training complete" % j)
+            print ("Epoch {} training complete".format(j+1))
             if monitor_training_cost:
                 cost = self.total_cost(training_data, lmbda)
                 training_cost.append(cost)
@@ -174,16 +178,40 @@ class Network(object):
                 training_accuracy.append(accuracy)
                 print ("Accuracy on training data: {} / {}".format(
                     accuracy, n))
+                plot_points[0, 0, 0]=plot_points[0, 0, 1]
+                plot_points[0, 0, 1]=j+1
+                plot_points[0, 1, 0]=plot_points[0, 1, 1]
+                plot_points[0, 1, 1]=accuracy/10
+                plt.plot(plot_points[0, 0], plot_points[0, 1], 'b.-', label='training accuracy')
+
             if monitor_evaluation_cost:
                 cost = self.total_cost(evaluation_data, lmbda, convert=True)
                 evaluation_cost.append(cost)
                 print ("Cost on evaluation data: {}".format(cost))
+                plot_points[2, 0, 0]=plot_points[2, 0, 1]
+                plot_points[2, 0, 1]=j+1
+                plot_points[2, 1, 0]=plot_points[2, 1, 1]
+                plot_points[2, 1, 1]=cost*10
+                plt.plot(plot_points[2, 0], plot_points[2, 1], 'g.-', label='evaluation cost')
+
             if monitor_evaluation_accuracy:
                 accuracy = self.accuracy(evaluation_data)
                 evaluation_accuracy.append(accuracy)
                 print ("Accuracy on evaluation data: {} / {}".format(
-                    self.accuracy(evaluation_data), n_data))
+                accuracy, n_data))
+                plot_points[1, 0, 0]=plot_points[1, 0, 1]
+                plot_points[1, 0, 1]=j+1
+                plot_points[1, 1, 0]=plot_points[1, 1, 1]
+                plot_points[1, 1, 1]=accuracy/100
+                plt.plot(plot_points[1, 0], plot_points[1, 1], 'r.-', label='test accuracy')  
+                if j==0:
+                    plt.legend(loc="upper left")
+                    plt.xlabel("Epocs")
+                #plt.ion()
+                plt.pause(0.00000000001)
+
             print()
+            plt.show()
         return evaluation_cost, evaluation_accuracy, \
             training_cost, training_accuracy
 
@@ -201,10 +229,38 @@ class Network(object):
             delta_nabla_b, delta_nabla_w = self.backprop(x, y)
             nabla_b = [nb+dnb for nb, dnb in zip(nabla_b, delta_nabla_b)]
             nabla_w = [nw+dnw for nw, dnw in zip(nabla_w, delta_nabla_w)]
+      
+        #self.momentum(eta, nabla_w, mini_batch)
+        #nabla_w = self.rmspropfunc(eta, nabla_w, mini_batch)
+        #nabla_w = self.adagrad(eta, nabla_w, mini_batch)
         self.weights = [(1-eta*(lmbda/n))*w-(eta/len(mini_batch))*nw
                         for w, nw in zip(self.weights, nabla_w)]
         self.biases = [b-(eta/len(mini_batch))*nb
                        for b, nb in zip(self.biases, nabla_b)]
+    def momentum(self, eta, nabla_w, mini_batch):
+        self.velocity = [0.5*v-(eta/len(mini_batch))*nw                  
+                        for v, nw in zip(self.velocity, nabla_w)]
+        self.weights = [v+w for v, w in zip(self.velocity, self.weights)]
+
+    def adagrad(self, eta, nabla_w, mini_batch):
+        self.rmsprop = [np.add(rms,np.square(nab_w))
+                       for rms, nab_w in zip(self.rmsprop, nabla_w)]
+        nabla_w = [nw/(np.sqrt(rmscalc+0.00001))
+                  for nw, rmscalc in zip(nabla_w, self.rmsprop)]
+        return nabla_w
+
+    def rmspropfunc(self, eta, nabla_w, mini_batch):
+        self.rmsprop = [np.add(rms*(0.4),np.square(nab_w)*(0.6))
+                       for rms, nab_w in zip(self.rmsprop, nabla_w)]       
+        nabla_w = [nw/(np.sqrt(rmscalc+0.00001))
+                  for nw, rmscalc in zip(nabla_w, self.rmsprop)]       
+        return nabla_w
+
+    def adadelta(self):
+        pass
+        
+    def adam(self):
+        pass
 
     def backprop(self, x, y):
         """Return a tuple ``(nabla_b, nabla_w)`` representing the
